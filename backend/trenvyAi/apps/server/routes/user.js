@@ -6,6 +6,7 @@ import prisma from "../database/prismaClient.js";
 import {hashPassword} from'../services/HashPassword.js'
 import {sendSignupOTP} from'../services/EmailService.js'
 import {OtpGenrater} from'../services/OtpGenrater.js'
+import passport from "../services/authcontroller.js";
 router.post('/signup', async(req, res) => {
     try{
         // console.log("here in the signup token")
@@ -79,4 +80,21 @@ router.post('/signup-otp-verification', async(req, res) => {
         return res.status(500).send({message:"error occurred"});
     }
 })
+router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+
+//Handle Google callback
+router.get(
+    "/google/callback",
+    passport.authenticate("google", { session: false }),
+    (req, res) => {
+        // req.user is set in the Google strategy `done(null, { user, token })`
+        const { user, token } = req.user;
+        console.log(req.user);
+        res.status(200).json({
+            message: "Google authentication successful",
+            user,
+            token,
+        });
+    }
+);
 export default router;
