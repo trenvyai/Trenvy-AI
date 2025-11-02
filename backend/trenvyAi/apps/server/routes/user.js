@@ -3,7 +3,7 @@ const router = express.Router();
 import jwt from "jsonwebtoken";
 import redisClient from'../microservices/Redisserver.js'
 import prisma from "../database/prismaClient.js";
-import {hashPassword} from'../services/HashPassword.js'
+import {hashPassword , comparepassword} from'../services/HashPassword.js'
 import {sendSignupOTP} from'../services/EmailService.js'
 import {OtpGenrater} from'../services/OtpGenrater.js'
 import passport from "../services/authcontroller.js";
@@ -81,20 +81,50 @@ router.post('/signup-otp-verification', async(req, res) => {
     }
 })
 router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
-
 //Handle Google callback
-router.get(
-    "/google/callback",
-    passport.authenticate("google", { session: false }),
-    (req, res) => {
+router.get("/google/callback", passport.authenticate("google", { session: false }), (req, res) => {
         // req.user is set in the Google strategy `done(null, { user, token })`
-        const { user, token } = req.user;
-        console.log(req.user);
-        res.status(200).json({
-            message: "Google authentication successful",
-            user,
-            token,
-        });
+        try{
+            const { user, token } = req.user;
+            console.log(req.user);
+            res.status(200).json({
+                message: "Google authentication successful",
+                user,
+                token,
+            });
+        }catch (e) {
+            return res.status(500).send({message:"error occurred"});
+
+        }
     }
 );
+router.post('/login',async(req, res) => {
+try{
+    const {search, password} = req.body;
+    const data = await prisma.user.findFirst({
+        where: {
+            OR: [
+                { email: search },
+                { username: search },
+            ],
+        },
+    });
+    if(!data){
+        return res.status(400).json({message:"user not found"});
+    }
+    if(!comparepassword(password , data.password)){
+        return res.status(401).send({message:"wrong password"});
+    }
+    const token = jwt.sign(
+        { id: data.id},
+        Process.env.JWT_SECRET || "secret123",
+        { expiresIn: "7d" }
+    );
+    await redisClient.setEx(`${data.id}`,600, JSON.stringify(data))
+   return res.status(200).json({data: {data , token}});
+}catch(err){
+    console.log(err)
+    return res.status(500).send({message:"error occurred"});
+}
+})
 export default router;
