@@ -1,4 +1,7 @@
 // we need to make it to handle the all the google auth
+import dotenv from "dotenv";
+dotenv.config();
+
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import prisma from "../database/prismaClient.js";
