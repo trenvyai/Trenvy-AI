@@ -7,16 +7,22 @@ import { hashPassword, comparepassword } from '../services/HashPassword.js'
 import { sendSignupOTP, resetPasswordOTP } from '../services/EmailService.js'
 import { OtpGenrater } from '../services/OtpGenrater.js'
 import passport from "../services/authcontroller.js";
+import { isUsernameTaken, addUsername, getStats } from "../services/UsernameVerifier.js";
 
 router.post('/signup', async (req, res) => {
     try {
-        // console.log("here in the signup token")
-        // console.log(req.body)
         const body = req.body;
         const { username, password, email, name } = body;
         if (!body.username || !body.password || !body.email) {
             return res.status(401).send({ message: "all fields are required" });
         }
+
+        // Check username availability using Bloom filter
+        const usernameCheck = await isUsernameTaken(username);
+        if (!usernameCheck.available) {
+            return res.status(401).send({ message: "Username already taken" });
+        }
+
         const ExistingUser = await prisma.user.findUnique({
             where: {
                 email: email,
@@ -60,7 +66,10 @@ router.post('/signup-otp-verification', async (req, res) => {
                 isVerified: true
             }
         })
-        // console.log(user)
+        
+        // Add username to Bloom filter
+        addUsername(userData.username);
+        
         await redisClient.del(`pendingUser:${email}`);
         const token = jwt.sign(
             { id: user.id, email: email },
@@ -147,6 +156,39 @@ router.post('/resetpassword', async (req, res) => {
         const userData = { email, otp };
         await redisClient.setEx(`pendingUser:${email}`, 600, JSON.stringify(userData));
         return res.status(200).send({ message: "successfully sent", UserEmail: email });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).send({ message: "error occurred" });
+    }
+});
+
+// Check username availability
+router.get('/check-username/:username', async (req, res) => {
+    try {
+        const { username } = req.params;
+        
+        if (!username || username.length < 3) {
+            return res.status(400).send({ message: "Username must be at least 3 characters" });
+        }
+
+        const result = await isUsernameTaken(username);
+        
+        return res.status(200).json({
+            username,
+            available: result.available,
+            checkedWithDb: result.needsDbCheck,
+        });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).send({ message: "error occurred" });
+    }
+});
+
+// Get Bloom filter statistics (admin/debug endpoint)
+router.get('/bloom-stats', async (_req, res) => {
+    try {
+        const stats = getStats();
+        return res.status(200).json(stats);
     } catch (err) {
         console.log(err);
         return res.status(500).send({ message: "error occurred" });
