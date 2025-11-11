@@ -7,6 +7,9 @@ import {hashPassword , comparepassword} from'../services/HashPassword.js'
 import {sendSignupOTP} from'../services/EmailService.js'
 import {OtpGenrater} from'../services/OtpGenrater.js'
 import passport from "../services/authcontroller.js";
+// in this route user signup is handled
+// from the frontend we are expecting @username,@name,@email,@password
+// if any of the thing is not available in the JSON we are throwing the error
 router.post('/signup', async(req, res) => {
     try{
         // console.log("here in the signup token")

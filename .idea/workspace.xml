@@ -6,8 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="87758945-e091-4b44-ba12-e2934b04210e" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/trenvyAi/apps/server/routes/user.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/trenvyAi/apps/server/routes/user.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/trenvyAi/apps/server/services/HashPassword.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/trenvyAi/apps/server/services/HashPassword.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -112,7 +110,7 @@
       <workItem from="1761659123895" duration="1705000" />
       <workItem from="1761837079057" duration="18230000" />
       <workItem from="1761980490459" duration="110000" />
-      <workItem from="1762061362647" duration="6597000" />
+      <workItem from="1762061362647" duration="7184000" />
     </task>
     <servers />
   </component>
