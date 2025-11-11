@@ -61,3 +61,69 @@ export async function sendSignupOTP(email, name, otp) {
         throw new Error("Email sending failed");
     }
 }
+
+/**
+ * Sends password reset OTP email
+ * @param {string} email - Recipient's email address
+ * @param {string|number} otp - One-time password for password reset
+ */
+export async function resetPasswordOTP(email, otp) {
+    try {
+        // Create SMTP transporter
+        const transporter = nodemailer.createTransport({
+            host: "smtp.gmail.com",
+            port: 465, // 465 for SSL
+            secure: true,
+            auth: {
+                user: process.env.SMTP_USER, // sender email
+                pass: process.env.SMTP_PASS, // app password or SMTP key
+            },
+        });
+
+        // Email template
+        const mailOptions = {
+            from: `"Trenvy Support" <${process.env.SMTP_USER}>`,
+            to: email,
+            subject: "Reset Your Password - Trenvy",
+            html: `
+        <div style="font-family: Arial, sans-serif; background-color: #f9fafb; padding: 30px;">
+          <div style="max-width: 600px; margin: 0 auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+            <h2 style="color: #333;">Password Reset Request</h2>
+            <p style="font-size: 15px; color: #555;">
+              We received a request to reset your password for your <strong>Trenvy</strong> account.
+              Use the OTP below to proceed with resetting your password:
+            </p>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <div style="font-size: 28px; font-weight: bold; color: #dc3545; letter-spacing: 3px;">
+                ${otp}
+              </div>
+            </div>
+
+            <p style="font-size: 14px; color: #666;">
+              This OTP will expire in <strong>10 minutes</strong>. Please do not share it with anyone for security reasons.
+            </p>
+
+            <p style="font-size: 14px; color: #666; margin-top: 20px;">
+              If you did not request a password reset, please ignore this email or contact support if you have concerns.
+            </p>
+
+            <hr style="margin: 25px 0; border: none; border-top: 1px solid #eee;" />
+            <p style="font-size: 12px; color: #aaa; text-align: center;">
+              © ${new Date().getFullYear()} Trenvy. All rights reserved.
+            </p>
+          </div>
+        </div>
+      `,
+        };
+
+        // Send the email
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`Password reset OTP email sent to ${email}: ${info.messageId}`);
+        return info;
+    } catch (error) {
+        console.error("Error sending password reset OTP email:", error);
+        throw new Error("Email sending failed");
+    }
+}
+
