@@ -1,4 +1,4 @@
-import prisma from '../Database/prismaClient.js';
+import prisma from '../database/prismaClient.js';
 
 /**
  * Audit logging for password reset events

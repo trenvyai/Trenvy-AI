@@ -125,22 +125,22 @@
 │ 7. Store Token in Redis                                 │
 │    • Key: password_reset:token:tokenId                  │
 │    • Value: { userId, tokenHash, email, createdAt }     │
-│    • TTL: 900 seconds (15 minutes)                       │
+│    • TTL: 900 seconds (15 minutes)                      │
 └────┬────────────────────────────────────────────────────┘
      │
      ▼
 ┌─────────────────────────────────────────────────────────┐
 │ 8. Enqueue Email (Async)                                │
-│    • Add job to email queue                              │
+│    • Add job to email queue                             │
 │    • Payload: { email, name, tokenId, rawToken }        │
-│    • Worker sends email in background                    │
+│    • Worker sends email in background                   │
 └────┬────────────────────────────────────────────────────┘
      │
      ▼
 ┌─────────────────────────────────────────────────────────┐
 │ 9. Audit Log (PostgreSQL)                               │
 │    • Record: { id, userId, ip, outcome, meta }          │
-│    • Outcome: "requested"                                │
+│    • Outcome: "requested"                               │
 └────┬────────────────────────────────────────────────────┘
      │
      ▼
