@@ -4,10 +4,10 @@ import jwt from "jsonwebtoken";
 import redisClient from '../microservices/Redisserver.js'
 import prisma from "../database/prismaClient.js";
 import { hashPassword, comparepassword } from '../services/HashPassword.js'
-import { sendSignupOTP, resetPasswordOTP } from '../services/EmailService.js'
+import { sendSignupOTP } from '../services/EmailService.js'
 import { OtpGenrater } from '../services/OtpGenrater.js'
 import passport from "../services/authcontroller.js";
-import { isUsernameTaken, addUsername, getStats } from '../services/UsernameVerifier.js';
+import { isUsernameTaken, addUsername, addEmail, getStats } from '../services/UsernameVerifier.js';
 // in this route user signup is handled
 // from the frontend we are expecting @username,@name,@email,@password
 // if any of the thing is not available in the JSON we are throwing the error
@@ -71,8 +71,9 @@ router.post('/signup-otp-verification', async (req, res) => {
             }
         })
         
-        // Add username to Bloom filter
+        // Add username and email to Bloom filter
         addUsername(userData.username);
+        addEmail(email);
         
         await redisClient.del(`pendingUser:${email}`);
         const token = jwt.sign(
@@ -138,30 +139,6 @@ router.post('/login', async (req, res) => {
         return res.status(200).json({ data: { data, token } });
     } catch (err) {
         console.log(err)
-        return res.status(500).send({ message: "error occurred" });
-    }
-});
-router.post('/resetpassword', async (req, res) => {
-    try {
-        const { email } = req.body;
-        if (!email) {
-            return res.status(401).send({ message: "email is required" });
-        }
-        const ExistingUser = await prisma.user.findUnique({
-            where: {
-                email: email,
-            }
-        })
-        if (!ExistingUser) {
-            return res.status(401).send({ message: "Invalid email" });
-        }
-        const otp = OtpGenrater();
-        await resetPasswordOTP(email, otp);
-        const userData = { email, otp };
-        await redisClient.setEx(`pendingUser:${email}`, 600, JSON.stringify(userData));
-        return res.status(200).send({ message: "successfully sent", UserEmail: email });
-    } catch (err) {
-        console.log(err);
         return res.status(500).send({ message: "error occurred" });
     }
 });
