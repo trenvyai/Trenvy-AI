@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,14 +6,142 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
 model User {
-  id          String   @id @default(uuid())
-  username    String   @unique
-  name        String
-  email       String   @unique
-  password    String
-  isVerified  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                    String                    @id @default(uuid()) @map("id")
+  username              String?                   @unique @db.VarChar(100)
+  name                  String?                   @db.VarChar(200)
+  email                 String                    @unique @db.VarChar(254)
+  password              String?                   // store argon2 hash
+  isVerified            Boolean                   @default(false)
+  createdAt             DateTime                  @default(now())
+  googleId              String?                   @unique
+  isActive              Boolean                   @default(true)
+  avatarUrl             String?                   @db.Text
+  bio                   String?                   @db.Text
+  updatedAt             DateTime                  @updatedAt
+
+  platformAccounts      PlatformAccount[]         @relation("user_platform_accounts")
+  passwordResetsAudit   PasswordResetsAudit[]     @relation("user_password_resets")
+  emailChanges          EmailChange[]             @relation("user_email_changes")
+
+  @@map("users")
+  @@index([createdAt])
 }
+
+model Platform {
+  platform_id   Int               @id @default(autoincrement()) @map("platform_id")
+  name          String            @unique @db.VarChar(50)
+  created_at    DateTime          @default(now()) @map("created_at")
+
+  accounts      PlatformAccount[] @relation("platform_accounts")
+  posts         Post[]            @relation("platform_posts")
+
+  @@map("platforms")
+}
+
+model PlatformAccount {
+  id            Int       @id @default(autoincrement())
+  user          User      @relation("user_platform_accounts", fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  platform      Platform  @relation("platform_accounts", fields: [platformId], references: [platform_id], onDelete: Cascade)
+  platformId    Int
+  handle        String?   @db.VarChar(100)
+  auto_post     Boolean   @default(false)  // if true automatically upload posts to this platform
+  created_at    DateTime  @default(now())   @map("created_at")
+
+  posts         Post[]    @relation("platform_account_posts")
+
+  @@map("platform_accounts")
+  @@unique([platformId, handle], name: "platform_handle_unique")
+  @@index([userId])
+  @@index([platformId])
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  TEXT
+  OTHER
+}
+
+model Post {
+  post_id        BigInt     @id @default(autoincrement()) @map("post_id") @db.BigInt
+  platform       Platform   @relation("platform_posts", fields: [platformId], references: [platform_id], onDelete: Cascade)
+  platformId     Int        @map("platform_id")
+  platformAccount PlatformAccount? @relation("platform_account_posts", fields: [platformAccountId], references: [id])
+  platformAccountId Int?    @map("platform_account_id")
+
+  user_handle    String?    @db.VarChar(100)      // username/handle used for the post (redundant copy)
+  caption        String?    @db.Text
+  post_url       String?    @db.Text
+  media_type     MediaType? @map("media_type")
+  timestamp      DateTime?  // when the post was created on the platform
+  likes          Int        @default(0)
+  comments       Int        @default(0)
+  shares         Int        @default(0)
+  views          Int        @default(0)
+  post_at        DateTime   @default(now()) @map("post_at")
+
+  hashtags       PostHashtag[] @relation("post_post_hashtags")
+
+  @@map("posts")
+  @@index([platformId])
+  @@index([platformAccountId])
+  @@index([post_at])
+}
+
+model Hashtag {
+  hashtag_id    Int            @id @default(autoincrement()) @map("hashtag_id")
+  hashtag_name  String         @unique @db.VarChar(100) @map("hashtag_name")
+  created_at    DateTime       @default(now()) @map("created_at")
+
+  posts         PostHashtag[]  @relation("hashtag_post_hashtags")
+
+  @@map("hashtags")
+  @@index([created_at])
+}
+
+model PostHashtag {
+  post         Post   @relation("post_post_hashtags", fields: [postId], references: [post_id], onDelete: Cascade)
+  postId       BigInt @map("post_id") @db.BigInt
+  hashtag      Hashtag @relation("hashtag_post_hashtags", fields: [hashtagId], references: [hashtag_id], onDelete: Cascade)
+  hashtagId    Int    @map("hashtag_id")
+  engagementWeight Float @default(0) @map("engagement_weight")
+
+  @@id([postId, hashtagId])
+  @@map("post_hashtags")
+  @@index([hashtagId])
+}
+
+model PasswordResetsAudit {
+  id          String   @id @default(uuid())
+  userId      String
+  requestedAt DateTime @default(now()) @map("requested_at")
+  requestIp   String?  @map("request_ip")
+  outcome     String
+  meta        Json?
+
+  User        User     @relation("user_password_resets", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_resets_audit")
+  @@index([requestedAt])
+  @@index([userId])
+}
+
+model EmailChange {
+  id            String   @id @default(uuid())
+  userId        String
+  newEmail      String
+  tokenHash     String   @unique @map("token_hash")
+  expiresAt     DateTime @map("expires_at")
+  used          Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation("user_email_changes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_changes")
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
